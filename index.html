@@ -245,10 +245,33 @@
     </div>
 
     <script>
-        // --- KONFIGURASI SUPABASE (TARUH DI BARIS PALING ATAS INI) ---
-        const SUPABASE_URL = 'https://qwmcumljxqcjpqodqgpc.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3bWN1bWxqeHFjanBxb2RxZ3BjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ2NzI5NjgsImV4cCI6MjExMDI0ODk2OH0.bQc_Wa47g0MTf_1uak7zDhelu0XrGVak6X0ZbZFc2cQ';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // --- KONFIGURASI SUPABASE (TANPA HARDCODE) ---
+        // URL & anon key TIDAK ditulis di sini. Keduanya diambil dari endpoint
+        // /api/config (Vercel Serverless Function) yang membacanya dari
+        // Environment Variables di dashboard Vercel.
+        //
+        // PENTING: variabel client sengaja diberi nama "supabaseClient",
+        // BUKAN "supabase", karena library CDN sudah memakai nama global
+        // "window.supabase". Deklarasi ganda nama "supabase" itulah penyebab
+        // error: "Identifier 'supabase' has already been declared",
+        // yang mematikan seluruh script dan membuat login tidak berfungsi.
+        let supabaseClient = null;
+
+        const supabaseReady = (async () => {
+            try {
+                const res = await fetch('/api/config');
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const cfg = await res.json();
+                if (!cfg.url || !cfg.anonKey) {
+                    throw new Error('Environment Variables SUPABASE_URL / SUPABASE_ANON_KEY belum di-set di Vercel.');
+                }
+                supabaseClient = window.supabase.createClient(cfg.url, cfg.anonKey);
+                return supabaseClient;
+            } catch (err) {
+                console.error('[SIMRS] Gagal memuat konfigurasi Supabase:', err);
+                return null;
+            }
+        })();
         
         // Store chart instances globally to destroy them before re-rendering
         let chartInstances = {};
@@ -422,8 +445,15 @@
                 const username = document.getElementById('username').value.toLowerCase();
                 const pass = document.getElementById('password').value;
 
+                // Pastikan koneksi Supabase sudah siap (konfigurasi dari /api/config)
+                const client = await supabaseReady;
+                if (!client) {
+                    ui.showToast('Koneksi Database Gagal', 'Konfigurasi Supabase tidak termuat. Periksa Environment Variables di dashboard Vercel lalu redeploy.', 'error');
+                    return;
+                }
+
                 // Cek langsung ke tabel 'users' di Supabase
-                const { data: users, error } = await supabase
+                const { data: users, error } = await client
                     .from('users')
                     .select('*')
                     .eq('username', username)
@@ -718,7 +748,10 @@
 			
             async renderMasterPasien(container) {
                 // Tarik data pasien secara real-time langsung dari tabel Supabase
-                const { data: supabasePatients, error } = await supabase.from('patients').select('*');
+                const client = await supabaseReady;
+                const { data: supabasePatients, error } = client
+                    ? await client.from('patients').select('*')
+                    : { data: null, error: new Error('Supabase client belum terinisialisasi') };
                 
                 // Jika gagal mengambil dari database, fallback ke data lokal agar tidak error
                 const patientsList = (!error && supabasePatients) ? supabasePatients : db.patients;
