@@ -315,77 +315,102 @@
                 { title: 'E. Distribusi & Integrasi External', desc: 'Mendistribusikan laporan ke penerima berwenang & mengirim metadata ke SIK/SATUSEHAT Kemenkes.' }
             ]
         };
-        // --- MOCK DATABASE EMR & SIMRS (Diperkaya untuk 2 Pasien Antrean Farmasi) ---
+        // --- DATA APLIKASI (SUMBER: DATABASE SUPABASE, TABEL app_state) ---
+        const DB_KEYS = ["patients","beds","inventory","prescriptions","goodsReceipts","stockOpnames","medicationReturns","reconciliations","transferRequests","auditLogs","reports","reportFinalization"];
+
+        // Struktur kosong. ISI datanya TIDAK ditulis di sini (tidak hardcoded):
+        // semuanya dimuat dari tabel "app_state" di Supabase saat login,
+        // dan disimpan kembali ke Supabase setiap kali ada perubahan.
         const db = {
-            patients: [
-                { id: 'RM-2026-00061', name: 'Budi Doremi', dob: '15/08/1995', gender: 'Laki-laki', phone: '08123456789', status: 'OUTPATIENT', room: '-', bed: '-', diagnosis: 'A09 - Diarrhoea and gastroenteritis', allergies: 'Tidak Ada', doctor: 'dr. Martin, Sp.PD', encounter: 'PLK-20260909-0012' },
-				{ id: 'RM-2026-00060', name: 'Eko Puspita', dob: '01/06/2003', gender: 'Laki-laki', phone: '08896919346', status: 'INPATIENT', room: 'Ruang Melati (Kelas 1)', bed: 'B02', diagnosis: 'J18.9 - Pneumonia, Unspecified', allergies: 'NSAID', doctor: 'dr. Martin, Sp.PD', encounter: 'KNJ-20260909-0001' },
-                { id: 'RM-2026-00059', name: 'Indah Anggraini', dob: '24/04/1989', gender: 'Perempuan', phone: '08746701711', status: 'INPATIENT', room: 'Ruang Melati (Kelas 1)', bed: 'B01', diagnosis: 'I10 - Essential Hypertension', allergies: 'Tidak Ada', doctor: 'dr. Martin, Sp.PD', encounter: 'KNJ-20260909-0002' },
-                { id: 'RM-2026-00058', name: 'Taufik Setiawan', dob: '19/11/1980', gender: 'Laki-laki', phone: '08836951577', status: 'INPATIENT', room: 'Ruang Anggrek (VIP)', bed: 'A05', diagnosis: 'A91 - Dengue Fever', allergies: 'Penicillin', doctor: 'dr. Martin, Sp.PD', encounter: 'KNJ-20260909-0003' }
-            ],
-            beds: [
-                { id: 'A01', ward: 'Ruang Anggrek (VIP)', status: 'AVAILABLE', patientId: null },
-                { id: 'A02', ward: 'Ruang Anggrek (VIP)', status: 'CLEANING', patientId: null },
-                { id: 'A05', ward: 'Ruang Anggrek (VIP)', status: 'OCCUPIED', patientId: 'RM-2026-00058' },
-                { id: 'B01', ward: 'Ruang Melati (Kelas 1)', status: 'OCCUPIED', patientId: 'RM-2026-00059' },
-                { id: 'B02', ward: 'Ruang Melati (Kelas 1)', status: 'OCCUPIED', patientId: 'RM-2026-00060' },
-                { id: 'B03', ward: 'Ruang Melati (Kelas 1)', status: 'AVAILABLE', patientId: null },
-                { id: 'C01', ward: 'Ruang Mawar (Kelas 2)', status: 'AVAILABLE', patientId: null },
-                { id: 'C02', ward: 'Ruang Mawar (Kelas 2)', status: 'AVAILABLE', patientId: null },
-                { id: 'C03', ward: 'Ruang Mawar (Kelas 2)', status: 'MAINTENANCE', patientId: null }
-            ],
-            inventory: [
-				{ id: 'OBT-001', name: 'Amlodipine 5mg Tab', stock: 150, reserved: 0, unit: 'Tablet', location: 'Rak A1', batch: 'B2301', expiry: '01/12/2027', alert: 'LASA' },
-				{ id: 'OBT-002', name: 'Paracetamol 500mg Tab', stock: 25, reserved: 0, unit: 'Tablet', location: 'Rak B2', batch: 'P442', expiry: '10/05/2026', alert: 'NONE' },
-				{ id: 'OBT-003', name: 'Ceftriaxone 1g Inj', stock: 45, reserved: 0, unit: 'Vial', location: 'Kulkas 1', batch: 'S092', expiry: '20/11/2025', alert: 'HIGH ALERT' },
-				{ id: 'OBT-004', name: 'Ibuprofen 400mg Tab', stock: 200, reserved: 0, unit: 'Tablet', location: 'Rak C1', batch: 'I881', expiry: '15/08/2026', alert: 'NONE' },
-				{ id: 'OBT-005', name: 'Levofloxacin 500mg Tab', stock: 120, reserved: 0, unit: 'Tablet', location: 'Rak C2', batch: 'L992', expiry: '01/01/2028', alert: 'LASA' }
-			],
-            prescriptions: [
-                { id: 'RX-47', patientId: 'RM-2026-00060', doctor: 'dr. Martin, Sp.PD', status: 'SUBMITTED', date: '03/10/2026', items: [{id: 'OBT-004', name: 'Ibuprofen 400mg Tab', qty: 20, sig: '3x1 c.p.c'}] }, // Trigger Alergi NSAID
-                { id: 'RX-48', patientId: 'RM-2026-00059', doctor: 'dr. Martin, Sp.PD', status: 'SUBMITTED', date: '03/10/2026', items: [{id: 'OBT-001', name: 'Amlodipine 5mg Tab', qty: 30, sig: '1x1 p.c'}] }   // Normal
-            ],
-			
-			goodsReceipts: [
-                { id: 'GR-2026-001', poNumber: 'PO-2026-088', supplier: 'PT Kimia Farma Tbk', date: '12/10/2026', itemsCount: 2, totalVal: 'Rp 4.500.000', status: 'RECEIVED', receivedBy: 'apt. Rina Santika, S.Farm' }
-            ],
-            stockOpnames: [
-                { id: 'SO-2026-09', date: '30/09/2026', totalItems: 5, totalDiscrepancy: -2, status: 'APPROVED', verifiedBy: 'apt. Rina Santika, S.Farm' }
-            ],
-            medicationReturns: [
-                { id: 'RET-2026-001', patientId: 'RM-2026-00060', patientName: 'Eko Puspita', ward: 'Ruang Melati (Kelas 1)', items: [{ id: 'OBT-004', name: 'Ibuprofen 400mg Tab', qty: 5, unit: 'Tablet', reason: 'Disetop Dokter / Kontraindikasi Alergi' }], status: 'PENDING', date: '03/10/2026', requestedBy: 'Ns. Sibungbung, S.Kep' }
-            ],
-			reconciliations: [
-                { id: 'REC-2026-001', patientId: 'RM-2026-00060', status: 'RECONCILED', date: '03/10/2026', pharmacist: 'apt. Rina Santika, S.Farm', notes: 'Obat dari rumah (Amlodipine 5mg) dilanjutkan. Tidak ada duplikasi atau interaksi obat terdeteksi.' }
-            ],
+            patients: [],
+            beds: [],
+            inventory: [],
+            prescriptions: [],
+            goodsReceipts: [],
+            stockOpnames: [],
+            medicationReturns: [],
+            reconciliations: [],
             transferRequests: [],
-			auditLogs: [],
-			reports: {
-				kunjungan: [
-					{ date: '09 Sep 2026', total: 180, bor: 72 },
-					{ date: '10 Sep 2026', total: 210, bor: 75 },
-					{ date: '11 Sep 2026', total: 195, bor: 73 },
-					{ date: '12 Sep 2026', total: 230, bor: 77 },
-					{ date: '13 Sep 2026', total: 255, bor: 80 },
-					{ date: '14 Sep 2026', total: 185, bor: 74 },
-					{ date: '15 Sep 2026', total: 280, bor: 78.5 }
-				],
-				icd: [
-					{ code: 'A91', name: 'Dengue Hemorrhagic Fever (DHF)', cases: 145, trend: 'alert' },
-					{ code: 'J18.9', name: 'Pneumonia, Unspecified', cases: 98, trend: 'normal' },
-					{ code: 'I10', name: 'Essential (Primary) Hypertension', cases: 86, trend: 'normal' },
-					{ code: 'K30', name: 'Functional Dyspepsia', cases: 64, trend: 'normal' },
-					{ code: 'E11.9', name: 'Type 2 Diabetes Mellitus', cases: 52, trend: 'normal' }
-				]
-			},
-			reportFinalization: {
-                reportId: 'REP-20260915-V1',
-                status: 'LOCKED',
-                version: 1,
-                finalizedBy: 'dr. Grace, MARS',
-                timestamp: '15 Sep 2026, 15:40 WIB',
-                hash: 'a1b2c3d4e5f67890123456789abcdef0',
-                externalSync: 'SENT_TO_SATUSEHAT'
+            auditLogs: [],
+            reports: { kunjungan: [], icd: [] },
+            reportFinalization: {}
+        };
+
+        // --- PENYIMPANAN DATA KE SUPABASE ---
+        const dataStore = {
+            lastSaved: {},              // key -> JSON terakhir yang sama dengan isi database
+            queue: Promise.resolve(),   // antrean agar muat/simpan tidak saling tabrakan
+            saveTimer: null,
+
+            isDirty(key) {
+                return JSON.stringify(db[key]) !== this.lastSaved[key];
+            },
+            hasChanges() {
+                return DB_KEYS.some(k => this.isDirty(k));
+            },
+
+            // Muat data dari Supabase. Mengembalikan true jika berhasil & data tersedia.
+            async _load() {
+                const client = await supabaseReady;
+                if (!client) return false;
+                const { data, error } = await client.from('app_state').select('key, data');
+                if (error || !data) {
+                    console.error('[SIMRS] Gagal memuat data dari Supabase:', error);
+                    return false;
+                }
+                let found = 0;
+                data.forEach(row => {
+                    if (!DB_KEYS.includes(row.key)) return;
+                    found++;
+                    // Jangan timpa perubahan lokal yang belum tersimpan
+                    if (this.lastSaved[row.key] !== undefined && this.isDirty(row.key)) return;
+                    db[row.key] = row.data;
+                    this.lastSaved[row.key] = JSON.stringify(row.data);
+                });
+                return found === DB_KEYS.length;
+            },
+
+            // Simpan hanya kumpulan data yang berubah.
+            async _save() {
+                const client = await supabaseReady;
+                if (!client) return false;
+                const rows = [];
+                const snapshot = {};
+                DB_KEYS.forEach(k => {
+                    const json = JSON.stringify(db[k]);
+                    if (json !== this.lastSaved[k]) {
+                        snapshot[k] = json;
+                        rows.push({ key: k, data: JSON.parse(json), updated_at: new Date().toISOString() });
+                    }
+                });
+                if (rows.length === 0) return true;
+                const { error } = await client.from('app_state').upsert(rows);
+                if (error) {
+                    console.error('[SIMRS] Gagal menyimpan data ke Supabase:', error);
+                    ui.showToast('Gagal Menyimpan', 'Perubahan belum tersimpan ke database. Periksa koneksi lalu coba lagi.', 'error');
+                    return false;
+                }
+                Object.assign(this.lastSaved, snapshot);
+                return true;
+            },
+
+            _enqueue(fn) {
+                const run = this.queue.then(fn, fn);
+                this.queue = run.catch(() => {});
+                return run;
+            },
+
+            load() { return this._enqueue(() => this._load()); },
+            save() { return this._enqueue(() => this._save()); },
+
+            // Ada perubahan lokal -> simpan. Tidak ada -> ambil data terbaru dari database.
+            sync() {
+                return this._enqueue(() => this.hasChanges() ? this._save() : this._load());
+            },
+
+            scheduleSave() {
+                clearTimeout(this.saveTimer);
+                this.saveTimer = setTimeout(() => this.save(), 300);
             }
         };
 
@@ -466,32 +491,61 @@
 
                 // Ambil data user pertama yang cocok dari hasil query database
                 const userRecord = users[0];
-                const role = userRecord.role;
-                const name = userRecord.name;
-                const roleDisplay = userRecord.role_display;
+                const user = { role: userRecord.role, name: userRecord.name, roleDisplay: userRecord.role_display };
 
-                this.user = { role, name, roleDisplay };
-                
-                document.getElementById('header-user-name').innerText = name;
-                document.getElementById('header-user-role').innerText = roleDisplay;
-                
+                if (!menuConfig[user.role]) {
+                    ui.showToast('Role Tidak Dikenal', `Role "${user.role}" pada akun ini tidak terdaftar di aplikasi.`, 'error');
+                    return;
+                }
+
+                // Muat seluruh data aplikasi dari database sebelum masuk
+                const loaded = await dataStore.load();
+                if (!loaded) {
+                    ui.showToast('Data Belum Tersedia', 'Data aplikasi tidak ditemukan di database. Jalankan skrip seed.sql di Supabase SQL Editor.', 'error');
+                    return;
+                }
+
+                this.enterApp(user);
+
+                actions.logActivity('LOGIN', 'Sistem Otorisasi', 'Pengguna berhasil masuk ke sesi baru.');
+                ui.showToast('Autentikasi Berhasil', `Selamat datang, ${user.name}. Hak akses: ${user.roleDisplay}`, 'success');
+            },
+
+            // Menampilkan aplikasi untuk user yang sudah terverifikasi
+            enterApp(user, viewId = 'dashboard') {
+                this.user = user;
+                try { sessionStorage.setItem('simrs_user', JSON.stringify(user)); } catch (e) {}
+
+                document.getElementById('header-user-name').innerText = user.name;
+                document.getElementById('header-user-role').innerText = user.roleDisplay;
+
                 const opt = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
                 document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-GB', opt);
 
                 document.getElementById('login-view').classList.add('hidden');
                 document.getElementById('main-view').classList.remove('hidden');
                 document.getElementById('logout-alert').classList.add('hidden');
-                
+
                 ui.buildSidebar();
-                this.navigate('dashboard'); 
-                
-                actions.logActivity('LOGIN', 'Sistem Otorisasi', 'Pengguna berhasil masuk ke sesi baru.');
-                
-                ui.showToast('Autentikasi Berhasil', `Selamat datang, ${name}. Hak akses: ${roleDisplay}`, 'success');
+                const validView = menuConfig[user.role].some(m => m.id === viewId) ? viewId : 'dashboard';
+                this.navigate(validView);
+            },
+
+            // Setelah halaman di-refresh: lanjutkan sesi yang masih aktif di tab ini
+            async restoreSession() {
+                let saved = null;
+                try { saved = JSON.parse(sessionStorage.getItem('simrs_user')); } catch (e) {}
+                if (!saved || !menuConfig[saved.role]) return;
+                const loaded = await dataStore.load();
+                if (!loaded) return;
+                let view = 'dashboard';
+                try { view = sessionStorage.getItem('simrs_view') || 'dashboard'; } catch (e) {}
+                this.enterApp(saved, view);
             },
 
             logout() {
                 this.user = null;
+                try { sessionStorage.removeItem('simrs_user'); sessionStorage.removeItem('simrs_view'); } catch (e) {}
                 document.getElementById('main-view').classList.add('hidden');
                 document.getElementById('login-view').classList.remove('hidden');
                 document.getElementById('logout-alert').classList.remove('hidden');
@@ -505,9 +559,10 @@
                 });
             },
 
-            navigate(viewId) {
+            async navigate(viewId) {
                 this.currentView = viewId;
-                
+                try { sessionStorage.setItem('simrs_view', viewId); } catch (e) {}
+
                 // Update Sidebar Styles
                 document.querySelectorAll('#sidebar-nav a').forEach(el => {
                     el.classList.remove('bg-sidebar-active', 'border-l-4', 'border-white', 'text-white');
@@ -525,6 +580,12 @@
 
                 const viewLabel = menuConfig[this.user.role].find(m => m.id === viewId)?.label || 'Dashboard';
                 document.getElementById('page-title').innerText = viewLabel;
+
+                // Sinkronkan dengan database sebelum menampilkan halaman:
+                // perubahan lokal disimpan, atau data terbaru dari pengguna lain diambil.
+                await dataStore.sync();
+                if (!this.user || this.currentView !== viewId) return; // sudah logout / pindah halaman
+                contentArea.innerHTML = '';
 
                 // Routing based on Role and ViewId
                 switch(viewId) {
@@ -746,20 +807,15 @@
                 `;
             },
 			
-            async renderMasterPasien(container) {
-                // Tarik data pasien secara real-time langsung dari tabel Supabase
-                const client = await supabaseReady;
-                const { data: supabasePatients, error } = client
-                    ? await client.from('patients').select('*')
-                    : { data: null, error: new Error('Supabase client belum terinisialisasi') };
-                
-                // Jika gagal mengambil dari database, fallback ke data lokal agar tidak error
-                const patientsList = (!error && supabasePatients) ? supabasePatients : db.patients;
+            renderMasterPasien(container) {
+                // Data pasien sudah dimuat dari database (sumber yang sama dengan halaman lain),
+                // sehingga pasien baru hasil admisi ikut tampil di sini.
+                const patientsList = db.patients;
 
                 container.innerHTML = `
                     <div class="mb-6">
                         <h3 class="text-2xl font-bold text-slate-800">Pasien & Ringkasan Klinis</h3>
-                        <p class="text-sm text-slate-500 mt-2">Data ditarik dari database Supabase.</p>
+                        <p class="text-sm text-slate-500 mt-2">Daftar pasien aktif beserta diagnosis, alergi, dan status rekonsiliasi obat.</p>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         ${patientsList.map(p => {
@@ -1245,7 +1301,7 @@
 														<div>
 															<span class="font-mono text-xs font-bold text-siloam bg-sky-50 px-2 py-0.5 rounded border border-sky-200">${p.id}</span>
 															<h4 class="font-bold text-slate-800 text-base mt-1">${pat ? pat.name : '-'}</h4>
-															<p class="text-[11px] text-slate-500">RM: ${pat ? pat.mr : '-'} | Dokter: ${p.doctorName || 'dr. Martin, Sp.PD'}</p>
+															<p class="text-[11px] text-slate-500">RM: ${pat ? pat.id : '-'} | Dokter: ${p.doctorName || 'dr. Martin, Sp.PD'}</p>
 														</div>
 														${isReady 
 															? `<span class="badge bg-amber-500 text-white font-bold text-[10px]"><i class="fas fa-check mr-1"></i> Picking Selesai</span>`
@@ -1900,6 +1956,10 @@
                     entity: entity,
                     detail: detail
                 });
+                if (db.auditLogs.length > 200) db.auditLogs.length = 200; // batasi riwayat
+
+                // Setiap aksi yang tercatat = ada perubahan data -> simpan ke database
+                dataStore.scheduleSave();
             },
             filterBeds() {
                 const kelas = document.getElementById('filter-kelas').value;
@@ -3143,7 +3203,8 @@
 
         // Initialize App on load
         window.onload = () => {
-            // Check if user is theoretically logged in, else show login (which is default state in HTML)
+            // Jika halaman di-refresh saat masih login, lanjutkan sesi tanpa login ulang
+            appState.restoreSession();
         }
 		
 		
